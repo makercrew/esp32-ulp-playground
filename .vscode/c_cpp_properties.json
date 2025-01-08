@@ -1,0 +1,21 @@
+{
+    "configurations": [
+      {
+        "name": "Linux",
+        "cStandard": "c11",
+        "cppStandard": "c++14",
+        "includePath": [
+          "/home/dev/esp/idf/components/**",
+          "${workspaceFolder}/**"
+        ],
+        "browse": {
+          "path": [
+            "/home/dev/esp/idf/components",
+            "${workspaceFolder}"
+          ],
+          "limitSymbolsToIncludedHeaders": false
+        }
+      }
+    ],
+    "version": 4
+}

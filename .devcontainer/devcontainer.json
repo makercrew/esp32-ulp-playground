@@ -1,0 +1,43 @@
+{
+    "name": "Dev (IDF 5.4)",
+    "build": {
+        "dockerfile": "Dockerfile",
+        "args": {
+            "USER": "dev"
+        }
+    },
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "terminal.integrated.profiles.linux": {
+                    "bash": {
+                        "path": "/bin/bash",
+                        "icon": "terminal-bash"
+                    }
+                },
+                "terminal.integrated.defaultProfile.linux": "bash"
+            },
+
+            // Install relevant extensions in the dev container
+            "extensions": [
+                "twxs.cmake",
+                "ms-vscode.cpptools",
+                "ms-vscode.vscode-serial-monitor",
+                "ms-vscode.hexeditor"
+            ]
+        }
+    },
+    "userEnvProbe": "loginInteractiveShell",
+
+    // Forward serial device to enable flash & monitor from command line
+    // NOTE: This only works on Linux
+    "runArgs": [
+        // Uncomment this if you want to connect to your dev board from within the container
+        // I highly recommend this on Linux. It's.... complicated on Windows. Just 
+        // install the IDF.py tools on your host machine and use that. Modify to match
+        // however your device enumerates.
+        // "--device=/dev/ttyUSB0"
+    ],
+
+    "remoteUser": "dev"
+}
