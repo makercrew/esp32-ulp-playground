@@ -2,7 +2,11 @@
 #include "ulp_riscv_utils.h"
 #include "sensor.h"
 
+extern uint32_t getsp();
+
 volatile uint32_t loop_count;
+volatile uint32_t cur_stack_address;
+volatile uint32_t min_stack_address;
 volatile temp_reading_t temp_reading;
 volatile double history[HISTORY_LENGTH];
 
@@ -29,6 +33,11 @@ void take_temperature_reading(void)
 int main (void)
 {
   loop_count++;
+
+  cur_stack_address = getsp();
+  if(cur_stack_address < min_stack_address || min_stack_address == 0) {
+      min_stack_address = cur_stack_address;
+  }
 
   // Take a reading only when the main app asks for it
   if(temp_reading.state == BEGIN){

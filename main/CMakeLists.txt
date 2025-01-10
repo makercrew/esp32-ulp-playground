@@ -13,6 +13,7 @@ set(ulp_app_name ulp_${COMPONENT_NAME})
 #    which should not be added to COMPONENT_SRCS.
 set(ulp_riscv_sources 
     "ulp/main.c"
+    "ulp/sp.S"
 )
 
 #
