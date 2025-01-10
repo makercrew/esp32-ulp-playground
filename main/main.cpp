@@ -4,6 +4,7 @@
 #include "ulp_main.h"
 #include "ulp_riscv.h"
 #include "esp_sleep.h"
+#include "ulp/sensor.h"
 
 constexpr const char *TAG = "main";
 
@@ -26,6 +27,24 @@ static void init_ulp_program(void)
     ESP_ERROR_CHECK(err);
 }
 
+void request_temperature(){
+    temp_reading_t *reading = (temp_reading_t*)&ulp_temp_reading;
+    if(reading->state == READY){
+        reading->state = BEGIN;
+    }
+}
+
+void print_history(){
+    temp_reading_t *reading = (temp_reading_t*)&ulp_temp_reading;
+    double *history = (double*)&ulp_history;
+    ESP_LOGI(TAG, "Current Reading: %f", reading->temp_in_f);
+    for(int i = 0; i < HISTORY_LENGTH; i++){
+        if(*(history + i) > 0){
+            ESP_LOGI(TAG, "History %d: %f", i, *(history + i));
+        }
+    }
+}
+
 extern "C" void app_main(void)
 {
     ESP_LOGI(TAG, "ESP32-S3 ULP Playground");
@@ -46,7 +65,14 @@ extern "C" void app_main(void)
     ESP_LOGI(TAG, "ULP Loop Count: %d", (int)ulp_loop_count);
 
     // Set the wakeup timer to 5 seconds and go to sleep
-    esp_sleep_enable_timer_wakeup(20 * 1'000 * 1'000);
-    esp_sleep_enable_ulp_wakeup();
-    esp_deep_sleep_start();
+    // esp_sleep_enable_timer_wakeup(20 * 1'000 * 1'000);
+    // esp_sleep_enable_ulp_wakeup();
+    // esp_deep_sleep_start();
+
+    while(1)
+    {
+        print_history();
+        request_temperature();
+        std::this_thread::sleep_for(std::chrono::seconds{5});
+    }
 }
