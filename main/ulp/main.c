@@ -3,6 +3,7 @@
 #include "sensor.h"
 
 extern uint32_t getsp();
+extern void stackbuster(int size);
 
 volatile uint32_t loop_count;
 volatile uint32_t cur_stack_address;
@@ -43,6 +44,8 @@ int main (void)
   if(temp_reading.state == BEGIN){
     take_temperature_reading();
   }
+
+  stackbuster(416);
   // if(loop_count % 5 == 0){
   //   ulp_riscv_wakeup_main_processor();
   // }
