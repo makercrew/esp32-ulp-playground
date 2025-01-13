@@ -39,11 +39,11 @@ void request_temperature(){
 
 void print_history(){
     temp_reading_t *reading = (temp_reading_t*)&ulp_temp_reading;
-    double *history = (double*)&ulp_history;
-    ESP_LOGI(TAG, "Current Reading: %f", reading->temp_in_f);
+    int *history = (int*)&ulp_history;
+    ESP_LOGI(TAG, "Current Reading: %f", (double)reading->temp_in_f/100.0);
     for(int i = 0; i < HISTORY_LENGTH; i++){
         if(*(history + i) > 0){
-            ESP_LOGI(TAG, "History %d: %f", i, *(history + i));
+            ESP_LOGI(TAG, "History %d: %f", i, (double)*(history + i)/100.0);
         }
     }
 }
@@ -98,8 +98,8 @@ extern "C" void app_main(void)
 
     while(1)
     {
-        // print_history();
-        // request_temperature();
+        print_history();
+        request_temperature();
 
         static uint32_t old_lwm = 0x1000;
         if(old_lwm != ulp_min_stack_address){
@@ -112,6 +112,6 @@ extern "C" void app_main(void)
             // Reset the variable so it only prints once
             ulp_crashed = false;
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds{200});
+        std::this_thread::sleep_for(std::chrono::seconds{5});
     }
 }

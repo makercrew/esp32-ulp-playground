@@ -10,7 +10,7 @@ typedef enum _STATE{
 } STATE;
 
 typedef struct {
-  double temp_in_f;
+  int temp_in_f;
   STATE state;
 } temp_reading_t;
 

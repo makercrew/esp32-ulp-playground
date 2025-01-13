@@ -9,7 +9,7 @@ volatile uint32_t loop_count;
 volatile uint32_t cur_stack_address;
 volatile uint32_t min_stack_address;
 volatile temp_reading_t temp_reading;
-volatile double history[HISTORY_LENGTH];
+volatile int history[HISTORY_LENGTH];
 
 void take_temperature_reading(void)
 {
@@ -20,7 +20,7 @@ void take_temperature_reading(void)
   temp_reading.state = IN_PROGRESS;
   // 500ms delay to simulate sensor read time
   ulp_riscv_delay_cycles(500 * ULP_RISCV_CYCLES_PER_MS);
-  temp_reading.temp_in_f = (double)loop_count + 1.0/loop_count;
+  temp_reading.temp_in_f = (100 * loop_count) + (10 * loop_count);
 
   // Store the reading in history
   if(history_index >= HISTORY_LENGTH){
@@ -69,9 +69,14 @@ int main (void)
     take_temperature_reading();
   }
 
-  nXOR(loop_count);
+  // Can be used to grow the stack to the point of overwriting
+  // critical program sections
+  // nXOR(loop_count);
 
+  // Can be used to simulate stack growth with overwrites 
+  // shared variables
   // stackbuster(416);
+
   // if(loop_count % 5 == 0){
   //   ulp_riscv_wakeup_main_processor();
   // }
