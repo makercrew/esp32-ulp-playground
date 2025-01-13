@@ -5,8 +5,11 @@
 #include "ulp_riscv.h"
 #include "esp_sleep.h"
 #include "ulp/sensor.h"
+#include "soc/rtc_cntl_reg.h"
 
 constexpr const char *TAG = "main";
+
+bool ulp_crashed = false;
 
 extern const uint8_t ulp_main_bin_start[] asm("_binary_ulp_main_bin_start");
 extern const uint8_t ulp_main_bin_end[]   asm("_binary_ulp_main_bin_end");
@@ -45,6 +48,22 @@ void print_history(){
     }
 }
 
+void handle_ulp_interrupt(void *arg)
+{
+    ulp_crashed = true;
+}
+
+// A simple function that tests if the ULP hardware trap signal 
+// interrupt has fired. Note, this just polls the register. You
+// would need to clear the interrupt bit after addressing the crash.
+bool has_ulp_crashed()
+{
+    if(GET_PERI_REG_MASK(RTC_CNTL_INT_RAW_REG, RTC_CNTL_COCPU_TRAP_INT_RAW)){
+        return true;
+    }
+    return false;
+}
+
 extern "C" void app_main(void)
 {
     ESP_LOGI(TAG, "ESP32-S3 ULP Playground");
@@ -57,10 +76,18 @@ extern "C" void app_main(void)
     else if(cause == ESP_SLEEP_WAKEUP_ULP){
         ESP_LOGI(TAG, "Woken up by ULP co-processor");
     }
+    else if(cause == ESP_SLEEP_WAKEUP_COCPU_TRAP_TRIG){
+        ESP_LOGW(TAG, "Woke up because ULP crashed!");
+    }
     else{
         ESP_LOGI(TAG, "Normal boot, starting ULP program");
         init_ulp_program();
     }
+
+    // Get notified if the ULP crashes by registering an interrupt
+    // handler for the hardware trap signal. Choose between using 
+    // an interrupt or simply polling each time in the while loop
+    ulp_riscv_isr_register(handle_ulp_interrupt, NULL, ULP_RISCV_TRAP_INT);
 
     ESP_LOGI(TAG, "ULP Loop Count: %d", (int)ulp_loop_count);
 
@@ -78,6 +105,12 @@ extern "C" void app_main(void)
         if(old_lwm != ulp_min_stack_address){
             old_lwm = ulp_min_stack_address;
             ESP_LOGI(TAG, "ULP Stack Pointer LWM: 0x%lx", ulp_min_stack_address);
+        }
+
+        if(ulp_crashed){
+            ESP_LOGE(TAG, "ULP has crashed");
+            // Reset the variable so it only prints once
+            ulp_crashed = false;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds{200});
     }
