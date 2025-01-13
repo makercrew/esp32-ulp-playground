@@ -98,8 +98,8 @@ extern "C" void app_main(void)
 
     while(1)
     {
-        // print_history();
-        // request_temperature();
+        print_history();
+        request_temperature();
 
         static uint32_t old_lwm = 0x1000;
         if(old_lwm != ulp_min_stack_address){
@@ -112,6 +112,6 @@ extern "C" void app_main(void)
             // Reset the variable so it only prints once
             ulp_crashed = false;
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds{200});
+        std::this_thread::sleep_for(std::chrono::seconds{5});
     }
 }

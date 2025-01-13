@@ -69,9 +69,14 @@ int main (void)
     take_temperature_reading();
   }
 
-  nXOR(loop_count);
+  // Can be used to grow the stack to the point of overwriting
+  // critical program sections
+  // nXOR(loop_count);
 
+  // Can be used to simulate stack growth with overwrites 
+  // shared variables
   // stackbuster(416);
+
   // if(loop_count % 5 == 0){
   //   ulp_riscv_wakeup_main_processor();
   // }
