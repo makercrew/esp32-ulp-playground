@@ -1,18 +1,18 @@
 #include "esp_log.h"
 #include <thread>
 #include <chrono>
-#include "ulp_main.h"
+#include "ulp_temp_app.h"
 #include "ulp_riscv.h"
 #include "esp_sleep.h"
-#include "ulp/sensor.h"
+#include "sensor.h"
 #include "soc/rtc_cntl_reg.h"
 
 constexpr const char *TAG = "main";
 
 bool ulp_crashed = false;
 
-extern const uint8_t ulp_main_bin_start[] asm("_binary_ulp_main_bin_start");
-extern const uint8_t ulp_main_bin_end[]   asm("_binary_ulp_main_bin_end");
+extern const uint8_t ulp_main_bin_start[] asm("_binary_ulp_temp_app_bin_start");
+extern const uint8_t ulp_main_bin_end[]   asm("_binary_ulp_temp_app_bin_end");
 
 static void init_ulp_program(void)
 {
