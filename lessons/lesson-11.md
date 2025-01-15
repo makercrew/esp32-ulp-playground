@@ -1,0 +1,170 @@
+# Lesson 11 - Make Your ULP App A Custom CMake Project
+
+## What We'll Cover
+- Creating a custom CMake project for the ULP application
+
+To see all of the changes made and working simply run `git checkout lesson-11-end`. 
+
+To follow along, run `git checkout lesson-11` and follow the instructions below.
+
+## What Needs to Happen
+Up to this point we have kept our ULP application code in a subfolder under our **main** 
+application folder and used the ULP helper functions in the build system to build our ULP app.
+As we've seen, this works fine and is probably all you need for most ULP apps. 
+However, as your ULP code gets more complex you may want to have finer control over the compiler and 
+linker options. To do so we have to do a few things:
+
+1. Move the ULP code (optional but will help with organization)
+1. Make the ULP app it's own custom CMake project
+1. Tell IDF how to include our new custom ULP project
+1. Refactor our main application code to use the new ULP project
+
+
+## Moving the Code
+
+Currently our ULP app resides in the **main/ulp** folder. Let's move our ULP code out to a dedicated 
+**ulp** folder. 
+
+Create a new folder in the root of the repository called **ulp** and move the existing **ulp** 
+folder there. To be more descriptive, let's rename the subfolder to **temp_app**. Once you are finished 
+you will have the following path from the root of your repo: **ulp/temp_app**. Under this folder will be 
+**sensor.h**, **main.c**, and **sp.S**.
+
+Curently, the building of our ULP app is handled by the changes we made in **main/CMakeLists.txt**. 
+That's where the call to `ulp_embed_binary` happens. So we not only need to move our source 
+code but we also need to set up a new ULP app-level **CMakeLists.txt**. This special file is 
+how we instruct the build system to build our ULP application. Create that file as 
+**ulp/temp_app/CMakeLists.txt** with the following content.
+
+```cmake
+cmake_minimum_required(VERSION 3.5)
+
+# Project/target name is passed from the main project to allow IDF to have a dependency on this target
+# as well as embed the binary into the main app
+project(${ULP_APP_NAME})
+add_executable(${ULP_APP_NAME} main.c sp.S)
+
+# Import the ULP project helper functions
+include(IDFULPProject)
+
+# Apply default compile options
+ulp_apply_default_options(${ULP_APP_NAME})
+
+# Apply default sources provided by the IDF ULP component
+ulp_apply_default_sources(${ULP_APP_NAME})
+
+# Add targets for building the binary, as well as the linkerscript which exports ULP shared variables to the main app
+ulp_add_build_binary_targets(${ULP_APP_NAME})
+
+# Everything below this line is optional and can be used to customize the build process
+
+# Create a custom library
+# set(lib_path "${CMAKE_CURRENT_LIST_DIR}/lib")
+# add_library(custom_lib STATIC "${lib_path}/lib_src.c")
+# target_include_directories(custom_lib PUBLIC "${lib_path}/")
+
+# # Link the library
+# target_link_libraries(${ULP_APP_NAME} PRIVATE custom_lib)
+
+# Set custom compile flags
+target_compile_options(${ULP_APP_NAME} PRIVATE)
+```
+
+This is all boilerplate code with a helpful comment telling you everything below a certain line 
+allows for customizing the build process. We'll revisit this in the next lesson. For now, just 
+understand this is what tells the build system how to build the ULP application. 
+
+## Tell IDF How to Include It
+
+Since our ULP app knows how to build itself now we need to refactor how it's included in 
+**main/CMakeLists.txt** so our main application can refer to it. It should look like this now:
+
+```cmake
+idf_component_register(SRCS "main.cpp"
+                    INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/ulp/temp_app"
+                    REQUIRES soc ulp)
+
+ulp_add_project("ulp_temp_app" "${CMAKE_SOURCE_DIR}/ulp/temp_app/")
+```
+
+Let's go over the changes we made. First, we removed all of the ULP boilerplate. Equivalents for all of 
+that now reside in **ulp/temp_app/CMakeLists.txt**. All of it was replaced with a single call to
+`ulp_add_project` since our ULP application is now its own CMake project. That function takes two 
+arguments; the name and location of our project. The name can be anything you want. I chose 
+"ulp_temp_app". Finally, we added the folder of our ULP app to the `INCLUDE_DIRS` directive so our 
+main app knows where to find the header file **sensor.h**.
+
+> [!IMPORTANT]
+> The name you choose here will be used to name the ulp header file, binary reference and a few other 
+> other things. We'll see this below.
+
+## Refactor Main App to Use It
+
+Let's try to build everything now.
+
+```sh
+idf.py fullclean
+idf.py build
+```
+
+You should see an error like this:
+
+```txt
+/workspaces/ulp_playground/main/main.cpp:4:10: fatal error: ulp_main.h: No such file or directory
+    4 | #include "ulp_main.h"
+```
+
+Recall that **ulp_main.h** was an automatically generated header that contains our shared variables. 
+Now that our ULP app is it's own project with a new name ("ulp_temp_app"), a new autogenerated 
+header exists. You can find all of this at **build/esp-idf/main/ulp_temp_app**. Our header file now matches the new name we gave our ULP project.
+
+Go ahead and change the include line in **main.cpp**:
+
+```cpp
+#include "ulp_temp_app.h"
+```
+
+Try to build again. You'll get another error.
+
+```txt
+/workspaces/ulp_playground/main/main.cpp:7:10: fatal error: ulp/sensor.h: No such file or directory
+    7 | #include "ulp/sensor.h"
+```
+
+Again, since our ULP app isn't a subfolder of our main application code we have to modify the 
+`#include`. Since we added the folder of our ULP app to the `INCLUDE_DIRS` directive above, we can 
+drop the **ulp** and include the sensor header as follows.
+
+```cpp
+#include "sensor.h"
+```
+
+Ok, we're getting closer. Time to build again. Soooo close. That time everything compiled fine but we 
+get a failure on the linker step.
+
+```txt
+undefined reference to `_binary_ulp_main_bin_end'
+undefined reference to `_binary_ulp_main_bin_start'
+```
+
+The linker is complaining because it can no longer find the start and end of our compiled ULP binary.
+This makes sense because we renamed some things. Do you remember how to find the symbol name for the 
+start and end of our ULP application? If you don't, I bet you know which Lesson I'm going to tell you 
+it was in 😎. That's right, Lesson 4.
+
+In our **build** folder we can look in **ulp_temp_app.bin.S**. We see the start and end of our ULP 
+app are now referred to as `_binary_ulp_temp_app_bin_start` and `_binary_ulp_temp_app_bin_end`. We 
+simply need to make this name change in **main.cpp**.
+
+```cpp
+extern const uint8_t ulp_main_bin_start[] asm("_binary_ulp_temp_app_bin_start");
+extern const uint8_t ulp_main_bin_end[]   asm("_binary_ulp_temp_app_bin_end");
+```
+
+Now we can build, flash, and monitor and all output will be exactly as it was before. We have 
+successfully refactored things to include our ULP app as it's own project. I would recommend doing 
+this only in the following scenarios:
+
+- You want to control a compiler flag for your ULP application
+- You want to control a linker flag for your ULP application
+- Your project contains multiple ULP applications and you want keep them separated
