@@ -28,4 +28,4 @@ ulp_add_build_binary_targets(${ULP_APP_NAME})
 # target_link_libraries(${ULP_APP_NAME} PRIVATE custom_lib)
 
 # Set custom compile flags
-target_compile_options(${ULP_APP_NAME} PRIVATE)
+target_compile_options(${ULP_APP_NAME} PRIVATE -fstack-usage -fcallgraph-info=su -Wstack-usage=32)
